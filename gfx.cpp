@@ -2741,7 +2741,7 @@ public:
         return buildRaytracingPrimitive(raytracing_primitive, gfx_raytracing_primitive, false);
     }
 
-    GfxResult buildRaytracingPrimitiveBatch(GfxRaytracingPrimitiveBatchElement const* batch, size_t batch_size)
+    GfxResult buildRaytracingPrimitiveBatch(GfxRaytracingPrimitiveBatchElement const* batch, size_t batch_size, bool update)
     {
         if(dxr_device_ == nullptr)
             return kGfxResult_InvalidOperation; // avoid spamming console output
@@ -2830,6 +2830,8 @@ public:
         blas_inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
         blas_inputs.NumDescs = static_cast<UINT>(batch_size);
         blas_inputs.pGeometryDescs = batch_geometries_.data();
+        if(update)
+            blas_inputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
         // Use first batch element to store BLAS BVH buffer
         RaytracingPrimitive& gfx_raytracing_primitive = raytracing_primitives_[batch[0].primitive];
         GfxBuffer& bvh_buffer = (gfx_raytracing_primitive.type_ == RaytracingPrimitive::kType_Triangles
@@ -2840,7 +2842,7 @@ public:
             : gfx_raytracing_primitive.procedural_.acceleration_structure_);
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO blas_info = {};
         dxr_device_->GetRaytracingAccelerationStructurePrebuildInfo(&blas_inputs, &blas_info);
-        uint64_t const scratch_data_size = GFX_MAX(blas_info.ScratchDataSizeInBytes, blas_info.UpdateScratchDataSizeInBytes);
+        uint64_t const scratch_data_size = (update ? blas_info.UpdateScratchDataSizeInBytes : blas_info.ScratchDataSizeInBytes);
         GFX_TRY(allocateRaytracingScratch(scratch_data_size)); // ensure scratch is large enough
         uint64_t const bvh_data_size = GFX_ALIGN(blas_info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
         if (bvh_data_size > bvh_buffer.size)
@@ -10637,7 +10639,14 @@ GfxResult gfxRaytracingPrimitiveBuildBatch(GfxContext context, GfxRaytracingPrim
 {
     GfxInternal* gfx = GfxInternal::GetGfx(context);
     if(!gfx) return kGfxResult_InvalidParameter;
-    return gfx->buildRaytracingPrimitiveBatch(batch, batch_size);
+    return gfx->buildRaytracingPrimitiveBatch(batch, batch_size, false);
+}
+
+GfxResult gfxRaytracingPrimitiveUpdateBatch(GfxContext context, GfxRaytracingPrimitiveBatchElement const *batch, size_t batch_size)
+{
+    GfxInternal* gfx = GfxInternal::GetGfx(context);
+    if(!gfx) return kGfxResult_InvalidParameter;
+    return gfx->buildRaytracingPrimitiveBatch(batch, batch_size, true);
 }
 
 GfxResult gfxRaytracingPrimitiveSetTransform(GfxContext context, GfxRaytracingPrimitive raytracing_primitive, float const *row_major_4x4_transform)
