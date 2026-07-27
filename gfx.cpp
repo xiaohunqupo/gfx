@@ -2842,7 +2842,7 @@ public:
             : gfx_raytracing_primitive.procedural_.acceleration_structure_);
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO blas_info = {};
         dxr_device_->GetRaytracingAccelerationStructurePrebuildInfo(&blas_inputs, &blas_info);
-        uint64_t const scratch_data_size = GFX_MAX(blas_info.ScratchDataSizeInBytes, blas_info.UpdateScratchDataSizeInBytes);
+        uint64_t const scratch_data_size = (update ? blas_info.UpdateScratchDataSizeInBytes : blas_info.ScratchDataSizeInBytes);
         GFX_TRY(allocateRaytracingScratch(scratch_data_size)); // ensure scratch is large enough
         uint64_t const bvh_data_size = GFX_ALIGN(blas_info.ResultDataMaxSizeInBytes, D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT);
         if (bvh_data_size > bvh_buffer.size)
