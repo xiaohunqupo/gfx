@@ -4549,8 +4549,8 @@ public:
             return GFX_SET_ERROR(kGfxResult_InvalidOperation, "Cannot encode without a valid command list");
         if(data_type < 0 || data_type >= kGfxDataType_Count)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot scan buffer object of unsupported data type `%u'", data_type);
-        if(dst.size != src.size)
-            return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot scan if source and destination buffer objects aren't of the same size");
+        if(dst.size < src.size)
+            return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot scan if destination buffer is smaller than source buffer");
         if((dst.size >> 2) > 0xFFFFFFFFull)
             return GFX_SET_ERROR(kGfxResult_InvalidOperation, "Cannot scan buffer object of more than 4 billion keys");
         if(dst.cpu_access == kGfxCpuAccess_Read || src.cpu_access == kGfxCpuAccess_Read)
