@@ -68,7 +68,7 @@ int32_t main()
 
     uint32_t const mesh_count     = gfxSceneGetMeshCount(scene);
     uint32_t const material_count = gfxSceneGetMaterialCount(scene);
-    uint32_t const instance_count = gfxSceneGetInstanceCount(scene);
+    uint32_t const instance_count = gfxSceneGetMeshInstanceCount(scene);
 
     for(uint32_t i = 0; i < mesh_count; ++i)
     {
@@ -137,7 +137,7 @@ int32_t main()
     {
         rt_meshes[i] = gfxCreateRaytracingPrimitive(gfx, rt_scene);
 
-        GfxConstRef<GfxInstance> instance_ref = gfxSceneGetInstanceHandle(scene, i);
+        GfxConstRef<GfxMeshInstance> instance_ref = gfxSceneGetMeshInstanceHandle(scene, i);
 
         uint32_t const mesh_id = (uint32_t)instance_ref->mesh;
         gfxRaytracingPrimitiveBuild(gfx, rt_meshes[i], index_buffers[mesh_id], vertex_buffers[mesh_id]);
@@ -244,7 +244,7 @@ int32_t main()
 
         for(uint32_t i = 0; i < instance_count; ++i)
         {
-            GfxInstance const &instance = gfxSceneGetInstances(scene)[i];
+            GfxMeshInstance const &instance = gfxSceneGetMeshInstances(scene)[i];
 
             if(instance.material)
                 gfxProgramSetParameter(gfx, rtao_program, "AlbedoBuffer", albedo_buffers[(uint32_t)instance.material]);
