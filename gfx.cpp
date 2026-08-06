@@ -367,7 +367,7 @@ class GfxInternal
             } raster_state_;
         };
 
-        DrawState() : reference_count_(0) {}
+        DrawState() : reference_count_(1) {}    // retain
         DrawState(DrawState &&other) : draw_state_(other.draw_state_), reference_count_(other.reference_count_) { other.reference_count_ = 0; }
         ~DrawState() { GFX_ASSERT(reference_count_ == 0); }
 
@@ -386,8 +386,6 @@ class GfxInternal
         Data draw_state_;
         uint32_t reference_count_;
     };
-    static GfxArray<DrawState> draw_states_;
-    static GfxHandles draw_state_handles_;
 
     struct Object
     {
@@ -3196,8 +3194,7 @@ public:
             return mesh_kernel;
         }
         GFX_ASSERT(define_count == 0 || defines != nullptr);
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState const *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState const *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
         {
             GFX_PRINT_ERROR(kGfxResult_InvalidOperation, "Cannot create a mesh kernel using an invalid draw state object");
@@ -3267,8 +3264,7 @@ public:
             return graphics_kernel;
         }
         GFX_ASSERT(define_count == 0 || defines != nullptr);
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState const *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState const *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
         {
             GFX_PRINT_ERROR(kGfxResult_InvalidOperation, "Cannot create a graphics kernel using an invalid draw state object");
@@ -5576,16 +5572,13 @@ public:
 
     static void DispenseDrawState(GfxDrawState &draw_state)
     {
-        draw_state.handle = draw_state_handles_.allocate_handle();
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        GFX_ASSERT(!draw_states_.has(draw_state_index));    // should never happen
-        draw_states_.insert(draw_state_index).reference_count_ = 1;
+        draw_state.handle = reinterpret_cast<uint64_t>(new DrawState());
+        GFX_ASSERT(!!draw_state.handle);    // out of memory
     }
 
     static void RetainDrawState(GfxDrawState const &draw_state)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);  // look up draw state
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         GFX_ASSERT(gfx_draw_state != nullptr); if(!gfx_draw_state) return;
         GFX_ASSERT(gfx_draw_state->reference_count_ > 0);
         ++gfx_draw_state->reference_count_;
@@ -5593,21 +5586,16 @@ public:
 
     static void ReleaseDrawState(GfxDrawState const &draw_state)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);  // look up draw state
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         GFX_ASSERT(gfx_draw_state != nullptr); if(!gfx_draw_state) return;
         GFX_ASSERT(gfx_draw_state->reference_count_ > 0);
         if(--gfx_draw_state->reference_count_ == 0)
-        {
-            draw_states_.erase(draw_state_index);
-            draw_state_handles_.free_handle(draw_state.handle);
-        }
+            delete gfx_draw_state;
     }
 
     static GfxResult SetDrawStateColorTarget(GfxDrawState const &draw_state, uint32_t target_index, DXGI_FORMAT texture_format)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot set color target on an invalid draw state object");
         if(target_index >= kGfxConstant_MaxRenderTarget)
@@ -5618,8 +5606,7 @@ public:
 
     static GfxResult SetDrawStateDepthStencilTarget(GfxDrawState const &draw_state, DXGI_FORMAT texture_format)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot set depth/stencil target on an invalid draw state object");
         gfx_draw_state->draw_state_.depth_stencil_format_ = texture_format;
@@ -5628,8 +5615,7 @@ public:
 
     static GfxResult SetDrawStateCullMode(GfxDrawState const &draw_state, D3D12_CULL_MODE cull_mode)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot set cull mode on an invalid draw state object");
         gfx_draw_state->draw_state_.raster_state_.cull_mode_ = cull_mode;
@@ -5638,8 +5624,7 @@ public:
 
     static GfxResult SetDrawStateFillMode(GfxDrawState const &draw_state, D3D12_FILL_MODE fill_mode)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot set fill mode on an invalid draw state object");
         gfx_draw_state->draw_state_.raster_state_.fill_mode_ = fill_mode;
@@ -5648,8 +5633,7 @@ public:
 
     static GfxResult SetDrawStateDepthFunction(GfxDrawState const &draw_state, D3D12_COMPARISON_FUNC depth_function)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot set depth function on an invalid draw state object");
         gfx_draw_state->draw_state_.depth_stencil_state_.depth_func_ = depth_function;
@@ -5658,8 +5642,7 @@ public:
 
     static GfxResult SetDrawStateDepthWriteMask(GfxDrawState const &draw_state, D3D12_DEPTH_WRITE_MASK depth_write_mask)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot set depth write mask on an invalid draw state object");
         gfx_draw_state->draw_state_.depth_stencil_state_.depth_write_mask_ = depth_write_mask;
@@ -5668,8 +5651,7 @@ public:
 
     static GfxResult SetDrawStatePrimitiveTopologyType(GfxDrawState const &draw_state, D3D12_PRIMITIVE_TOPOLOGY_TYPE primitive_topology_type)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot set primitive topology type on an invalid draw state object");
         gfx_draw_state->draw_state_.primitive_topology_type_ = primitive_topology_type;
@@ -5678,8 +5660,7 @@ public:
 
     static GfxResult SetDrawStateBlendMode(GfxDrawState const &draw_state, D3D12_BLEND src_blend, D3D12_BLEND dst_blend, D3D12_BLEND_OP blend_op, D3D12_BLEND src_blend_alpha, D3D12_BLEND dst_blend_alpha, D3D12_BLEND_OP blend_op_alpha)
     {
-        uint32_t const draw_state_index = static_cast<uint32_t>(draw_state.handle & 0xFFFFFFFFull);
-        DrawState *gfx_draw_state = draw_states_.at(draw_state_index);
+        DrawState *gfx_draw_state = reinterpret_cast<DrawState *>(draw_state.handle);
         if(!gfx_draw_state)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot set blend mode on an invalid draw state object");
         gfx_draw_state->draw_state_.blend_state_.src_blend_ = src_blend;
@@ -10317,9 +10298,6 @@ uint32_t const GfxInternal::kNumThreads_Invalid[] =
     1,
     1
 };
-
-GfxArray<GfxInternal::DrawState> GfxInternal::draw_states_;
-GfxHandles                       GfxInternal::draw_state_handles_("draw state");
 
 GfxContext gfxCreateContext(HWND window, GfxCreateContextFlags flags, IDXGIAdapter *adapter)
 {
