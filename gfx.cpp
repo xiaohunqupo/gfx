@@ -9896,12 +9896,12 @@ private:
                     {
                         fwrite(dxc_bytecode->GetBufferPointer(), dxc_bytecode->GetBufferSize(), 1, fd);
                         fclose(fd); // write out bytecode for shader caching
-                    }
-                    fd = _wfopen(shader_key_reflection.c_str(), L"wb");
-                    if(fd)
-                    {
-                        fwrite(dxc_reflection->GetBufferPointer(), dxc_reflection->GetBufferSize(), 1, fd);
-                        fclose(fd); // write out reflection for shader caching
+                        fd = _wfopen(shader_key_reflection.c_str(), L"wb");
+                        if(fd)
+                        {
+                            fwrite(dxc_reflection->GetBufferPointer(), dxc_reflection->GetBufferSize(), 1, fd);
+                            fclose(fd); // write out reflection for shader caching
+                        }
                     }
                     // Delete older cached files
                     std::filesystem::directory_iterator const end;
