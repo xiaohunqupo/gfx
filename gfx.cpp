@@ -9882,16 +9882,17 @@ private:
             // Delete older pdb files
             std::filesystem::directory_iterator const end;
             std::vector<std::filesystem::path>        pdb_files;
-            for(std::filesystem::directory_iterator iter{std::filesystem::path(shader_pdb_dir + shader_key_dir)}; iter != end; ++iter)
-                if(is_regular_file(*iter))
+            std::error_code                           ec, ec2;
+            for(std::filesystem::directory_iterator iter{std::filesystem::path(shader_pdb_dir + shader_key_dir)}; iter != end && !ec2; iter.increment(ec2))
+                if(is_regular_file(*iter, ec))
                     if(iter->path().extension() == ".pdb")
                         pdb_files.emplace_back(*iter);
             if(pdb_files.size() > max_cached_files)
             {
-                std::sort(pdb_files.begin(), pdb_files.end(), [](const std::filesystem::path &a, const std::filesystem::path &b) {
-                    return last_write_time(a) > last_write_time(b); });
+                std::sort(pdb_files.begin(), pdb_files.end(), [&ec](const std::filesystem::path &a, const std::filesystem::path &b) {
+                    return last_write_time(a, ec) > last_write_time(b, ec); });
                 for(size_t i = max_cached_files; i < pdb_files.size(); ++i)
-                    std::filesystem::remove(pdb_files[i]);
+                    std::filesystem::remove(pdb_files[i], ec);
             }
         }
 
@@ -9926,8 +9927,9 @@ private:
                     std::filesystem::directory_iterator const end;
                     std::vector<std::filesystem::path>        bytecode_files;
                     std::vector<std::filesystem::path>        reflection_files;
-                    for(std::filesystem::directory_iterator iter{std::filesystem::path(shader_cache_dir + shader_key_dir)}; iter != end; ++iter)
-                        if(is_regular_file(*iter))
+                    std::error_code                           ec, ec2;
+                    for(std::filesystem::directory_iterator iter{std::filesystem::path(shader_cache_dir + shader_key_dir)}; iter != end && !ec2; iter.increment(ec2))
+                        if(is_regular_file(*iter, ec))
                         {
                             if(iter->path().extension() == ".bytecode")
                                 bytecode_files.emplace_back(*iter);
@@ -9936,18 +9938,18 @@ private:
                         }
                     if(bytecode_files.size() > max_cached_files)
                     {
-                        std::sort(bytecode_files.begin(), bytecode_files.end(), [](const std::filesystem::path &a, const std::filesystem::path &b) {
-                            return last_write_time(a) > last_write_time(b); });
+                        std::sort(bytecode_files.begin(), bytecode_files.end(), [&ec](const std::filesystem::path &a, const std::filesystem::path &b) {
+                            return last_write_time(a, ec) > last_write_time(b, ec); });
                         for(size_t i = max_cached_files; i < bytecode_files.size(); ++i)
-                            std::filesystem::remove(bytecode_files[i]);
+                            std::filesystem::remove(bytecode_files[i], ec);
                     }
                     if (reflection_files.size() > max_cached_files)
                     {
                         std::sort(reflection_files.begin(), reflection_files.end(),
-                            [](std::filesystem::path const &a, std::filesystem::path const &b) {
-                                return last_write_time(a) > last_write_time(b); });
+                            [&ec](std::filesystem::path const &a, std::filesystem::path const &b) {
+                                return last_write_time(a, ec) > last_write_time(b, ec); });
                         for(size_t i = max_cached_files; i < reflection_files.size(); ++i)
-                            std::filesystem::remove(reflection_files[i]);
+                            std::filesystem::remove(reflection_files[i], ec);
                     }
                 }
             }
