@@ -47,5 +47,5 @@ float4 main(in float4 pos : SV_Position) : SV_Target
     color  = saturate(color);
     color  = color * color * (3.0f - 2.0f * color);
 
-    return float4(color, 0.0f);
+    return float4(color, 1.0f);
 }

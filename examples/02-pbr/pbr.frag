@@ -162,7 +162,7 @@ Result main(in Params params)
 
     // Populate our multiple render targets (i.e., MRT)
     Result result;
-    result.color    = float4(color, 0.0f);
+    result.color    = float4(color, 1.0f);
     result.velocity = CalculateVelocity(params);
 
     return result;
