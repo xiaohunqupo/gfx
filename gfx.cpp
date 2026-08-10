@@ -3991,6 +3991,8 @@ public:
             bound_color_targets_[target_index] = {}; // unbind
             return kGfxResult_NoError;
         }
+        if(!texture_handles_.has_handle(target_texture.handle))
+            return GFX_SET_ERROR(kGfxResult_InvalidOperation, "Cannot draw to an invalid texture object");
         if(mip_level >= target_texture.mip_levels)
             return GFX_SET_ERROR(kGfxResult_InvalidOperation, "Cannot draw to mip level that does not exist in texture object");
         if(slice >= (target_texture.is3D() ? GFX_MAX(target_texture.depth >> mip_level, 1u) : target_texture.depth))
@@ -4008,6 +4010,8 @@ public:
             bound_depth_stencil_target_ = {}; // unbind
             return kGfxResult_NoError;
         }
+        if(!texture_handles_.has_handle(target_texture.handle))
+            return GFX_SET_ERROR(kGfxResult_InvalidOperation, "Cannot draw to an invalid texture object");
         if(mip_level >= target_texture.mip_levels)
             return GFX_SET_ERROR(kGfxResult_InvalidOperation, "Cannot draw to mip level that does not exist in texture object");
         if(slice >= (target_texture.is3D() ? GFX_MAX(target_texture.depth >> mip_level, 1u) : target_texture.depth))
