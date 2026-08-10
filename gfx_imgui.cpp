@@ -57,6 +57,7 @@ class GfxImGuiInternal
     GfxSamplerState font_sampler_nearest_ = {}; // nearest sampler (selected via callback)
     GfxSamplerState current_sampler_ = {};      // sampler in use for the current draw
     int32_t alpha_mode_ = 0;                    // 0 == normal blend, 1 == reverse alpha, 2 == opaque
+    bool render_to_texture_ = false;
     GfxBuffer *index_buffers_ = nullptr;
     GfxBuffer *vertex_buffers_ = nullptr;
     GfxProgram imgui_program_ = {};
@@ -147,7 +148,8 @@ public:
         imgui_program_ = gfxCreateProgram(gfx_, imgui_program_desc, "gfx_ImGuiProgram");
         GFX_TRY(gfxDrawStateSetBlendMode(imgui_draw_state, D3D12_BLEND_ONE, D3D12_BLEND_INV_SRC_ALPHA, D3D12_BLEND_OP_ADD, D3D12_BLEND_ZERO, D3D12_BLEND_INV_SRC_ALPHA, D3D12_BLEND_OP_ADD)); // enable alpha blending
         GFX_TRY(gfxDrawStateSetCullMode(imgui_draw_state, D3D12_CULL_MODE_NONE));
-        GFX_TRY(gfxDrawStateSetColorTarget(imgui_draw_state, 0, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB));
+        GFX_TRY(gfxDrawStateSetColorTarget(imgui_draw_state, 0,
+            render_to_texture_ ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : gfxGetBackBufferFormat(gfx_)));
         imgui_kernel_ = gfxCreateGraphicsKernel(gfx_, imgui_program_, imgui_draw_state);
         if(!imgui_program_ || !imgui_kernel_)
             return GFX_SET_ERROR(kGfxResult_InternalError, "Unable to create program to draw ImGui");
@@ -236,18 +238,19 @@ public:
         gfx->alpha_mode_ = 0;
     }
 
-    GfxResult initialize(GfxContext const &gfx, char const **font_filenames, uint32_t font_count, ImFontConfig const *font_configs, ImGuiConfigFlags flags)
+    GfxResult initialize(GfxContext const &gfx, bool render_to_texture, char const **font_filenames,
+        uint32_t font_count, ImFontConfig const *font_configs, ImGuiConfigFlags flags)
     {
         if(!gfx)
             return GFX_SET_ERROR(kGfxResult_InvalidParameter, "Cannot initialize ImGui using an invalid context object");
         gfx_ = gfx; // keep reference to context
+        render_to_texture_ = render_to_texture;
 
         IMGUI_CHECKVERSION();
         ImGuiContext* gui_context = ImGui::CreateContext();
         if(gui_context == nullptr)
             return GFX_SET_ERROR(kGfxResult_InternalError, "Failed to initialize Imgui context");
         ImGui::SetCurrentContext(gui_context);
-        ImGui::StyleColorsDark();
         ImGuiIO &io = ImGui::GetIO();
         io.ConfigFlags |= flags; // config flags
         io.BackendRendererName = "imgui_impl_gfx";
@@ -365,8 +368,14 @@ public:
 
     GfxResult render(GfxTexture output_texture)
     {
-        if (!output_texture && gfxGetBackBufferFormat(gfx_) != DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
+        if(!output_texture && gfxGetBackBufferColorSpace(gfx_) != DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709)
             GFX_SET_ERROR(kGfxResult_InvalidParameter, "ImGui can only composite to sRGB render targets");
+        if(!!output_texture && output_texture.getFormat() != DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
+            GFX_SET_ERROR(kGfxResult_InvalidParameter, "ImGui can only render to sRGB output textures");
+        if(render_to_texture_ && !output_texture)
+            GFX_SET_ERROR(kGfxResult_InvalidParameter, "ImGui is configured to render to a texture but no output texture was provided");
+        if(!render_to_texture_ && output_texture)
+            GFX_SET_ERROR(kGfxResult_InvalidParameter, "ImGui is configured to render to the back buffer but an output texture was provided");
         ImGuiIO &io = ImGui::GetIO();
         ImGui::Render();    // implicit ImGui::EndFrame()
         ImDrawData *draw_data = ImGui::GetDrawData();
@@ -379,7 +388,7 @@ public:
 
         if(draw_data->TotalVtxCount > 0)
         {
-            if (!!output_texture)
+            if(!!output_texture)
                 gfxCommandClearTexture(gfx_, output_texture);
             char buffer[256];
             GfxBuffer &index_buffer = index_buffers_[buffer_index];
@@ -575,6 +584,8 @@ public:
         gfxCommandBindVertexBuffer(gfx_, vertex_buffer);
         if (!!output_texture)
             gfxCommandBindColorTarget(gfx_, 0, output_texture);
+        else
+            gfxCommandBindColorTarget(gfx_, 0, {});
         gfxCommandSetViewport(gfx_); // draw to render texture
         current_sampler_ = font_sampler_linear_;
         alpha_mode_      = 0;
@@ -589,12 +600,12 @@ public:
     static ImDrawCallback GetNormalAlphaCallback() { return gfx_DrawCallback_SetNormalAlpha; }
 };
 
-GfxResult gfxImGuiInitialize(GfxContext gfx, char const **font_filenames, uint32_t font_count, ImFontConfig const *font_configs, ImGuiConfigFlags flags)
+GfxResult gfxImGuiInitialize(GfxContext gfx, bool render_to_texture, char const **font_filenames, uint32_t font_count, ImFontConfig const *font_configs, ImGuiConfigFlags flags)
 {
     GfxResult result;
     GfxImGuiInternal *gfx_imgui = new GfxImGuiInternal();
     if(!gfx_imgui) return GFX_SET_ERROR(kGfxResult_OutOfMemory, "Unable to initialize ImGui");
-    result = gfx_imgui->initialize(gfx, font_filenames, font_count, font_configs, flags);
+    result = gfx_imgui->initialize(gfx, render_to_texture, font_filenames, font_count, font_configs, flags);
     if(result != kGfxResult_NoError)
     {
         delete gfx_imgui;
