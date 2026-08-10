@@ -562,7 +562,7 @@ public:
 
     GfxKernel getKernel(DXGI_FORMAT color_format)
     {
-        GfxKernel *imgui_kernel = imgui_kernels_.at(color_format);
+        GfxKernel const *imgui_kernel = imgui_kernels_.at(color_format);
         if(imgui_kernel != nullptr)
             return *imgui_kernel;
         GfxDrawState imgui_draw_state;
@@ -585,10 +585,7 @@ public:
         gfxCommandBindKernel(gfx_, getKernel(output_texture ? output_texture.getFormat() : DXGI_FORMAT_R8G8B8A8_UNORM_SRGB));
         gfxCommandBindIndexBuffer(gfx_, index_buffer);
         gfxCommandBindVertexBuffer(gfx_, vertex_buffer);
-        if (!!output_texture)
-            gfxCommandBindColorTarget(gfx_, 0, output_texture);
-        else
-            gfxCommandBindColorTarget(gfx_, 0, {});
+        gfxCommandBindColorTarget(gfx_, 0, output_texture);
         gfxCommandSetViewport(gfx_); // draw to render texture
         current_sampler_ = font_sampler_linear_;
         alpha_mode_      = 0;
