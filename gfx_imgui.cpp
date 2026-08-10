@@ -72,18 +72,6 @@ public:
     GfxImGuiInternal() {}
     ~GfxImGuiInternal() { terminate(); }
 
-    GfxKernel getKernel(DXGI_FORMAT color_format)
-    {
-        GfxKernel *imgui_kernel = imgui_kernels_.at(color_format);
-        if(imgui_kernel != nullptr)
-            return *imgui_kernel;
-        GfxDrawState imgui_draw_state;
-        gfxDrawStateSetBlendMode(imgui_draw_state, D3D12_BLEND_ONE, D3D12_BLEND_INV_SRC_ALPHA, D3D12_BLEND_OP_ADD, D3D12_BLEND_ZERO, D3D12_BLEND_INV_SRC_ALPHA, D3D12_BLEND_OP_ADD); // enable alpha blending
-        gfxDrawStateSetCullMode(imgui_draw_state, D3D12_CULL_MODE_NONE);
-        gfxDrawStateSetColorTarget(imgui_draw_state, 0, color_format);
-        return imgui_kernels_.insert(color_format, gfxCreateGraphicsKernel(gfx_, imgui_program_, imgui_draw_state));
-    }
-
     GfxResult initializeKernel()
     {
         for(uint32_t i = 0; i < imgui_kernels_.size(); ++i)
@@ -572,6 +560,18 @@ public:
         gfxCommandBindKernel(gfx_, composite_kernel_);
         gfxCommandDraw(gfx_, 3);
         return kGfxResult_NoError;
+    }
+
+    GfxKernel getKernel(DXGI_FORMAT color_format)
+    {
+        GfxKernel *imgui_kernel = imgui_kernels_.at(color_format);
+        if(imgui_kernel != nullptr)
+            return *imgui_kernel;
+        GfxDrawState imgui_draw_state;
+        gfxDrawStateSetBlendMode(imgui_draw_state, D3D12_BLEND_ONE, D3D12_BLEND_INV_SRC_ALPHA, D3D12_BLEND_OP_ADD, D3D12_BLEND_ZERO, D3D12_BLEND_INV_SRC_ALPHA, D3D12_BLEND_OP_ADD); // enable alpha blending
+        gfxDrawStateSetCullMode(imgui_draw_state, D3D12_CULL_MODE_NONE);
+        gfxDrawStateSetColorTarget(imgui_draw_state, 0, color_format);
+        return imgui_kernels_.insert(color_format, gfxCreateGraphicsKernel(gfx_, imgui_program_, imgui_draw_state));
     }
 
     void setDPIScale(float scale)
