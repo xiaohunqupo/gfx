@@ -366,8 +366,6 @@ public:
     {
         if(!output_texture && gfxGetBackBufferColorSpace(gfx_) != DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709)
             GFX_SET_ERROR(kGfxResult_InvalidParameter, "ImGui can only composite to sRGB render targets");
-        if(!!output_texture && output_texture.getFormat() != DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
-            GFX_SET_ERROR(kGfxResult_InvalidParameter, "ImGui can only render to sRGB output textures");
 
         ImGuiIO &io = ImGui::GetIO();
         ImGui::Render();    // implicit ImGui::EndFrame()
