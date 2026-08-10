@@ -152,5 +152,5 @@ float4 Resolve(in float4 pos : SV_Position) : SV_Target
                                    g_ResolveBuffer.Sample(g_NearestSampler, uv + float2(-1.0f,  0.0f) * g_TexelSize).xyz,
                                    g_ResolveBuffer.Sample(g_NearestSampler, uv + float2( 0.0f, -1.0f) * g_TexelSize).xyz);
 
-    return float4(color, 1.0f);
+    return float4(color, 0.0f);
 }
