@@ -4945,6 +4945,11 @@ public:
             {
                 RECT window_rect = {};
                 GetClientRect(window_, &window_rect);
+                uint32_t const window_width  = GFX_MAX(window_rect.right,  (LONG)8);
+                uint32_t const window_height = GFX_MAX(window_rect.bottom, (LONG)8);
+                bool const resized = (!IsIconic(window_) && (window_width != window_width_ || window_height != window_height_));
+                if(resized)
+                    GFX_TRY(resizeTextures(window_width, window_height));
                 D3D12_RESOURCE_BARRIER resource_barrier = {};
                 resource_barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
                 resource_barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -4965,14 +4970,10 @@ public:
                 {
                     return GFX_SET_ERROR(kGfxResult_InternalError, "Error detected during present: %s", hr);
                 }
-                uint32_t const window_width  = GFX_MAX(window_rect.right,  (LONG)8);
-                uint32_t const window_height = GFX_MAX(window_rect.bottom, (LONG)8);
                 back_buffer_index_ = swap_chain_->GetCurrentBackBufferIndex();
                 fence_index_ = (fence_index_ + 1) % max_frames_in_flight_;
-                if(!IsIconic(window_) && (window_width != window_width_ || window_height != window_height_))
-                {
-                    GFX_TRY(resizeCallback(window_width, window_height)); // reset fence index
-                }
+                if(resized)
+                    GFX_TRY(resizeBackbuffers(window_width, window_height)); // reset fence index
                 if(fences_[fence_index_]->GetCompletedValue() != fence_values_[fence_index_])
                 {
                     fences_[fence_index_]->SetEventOnCompletion(fence_values_[fence_index_], fence_event_);
@@ -10202,10 +10203,32 @@ private:
         return forceGarbageCollection();
     }
 
-    GfxResult resizeCallback(uint32_t window_width, uint32_t window_height)
+    GfxResult resizeBackbuffers(uint32_t window_width, uint32_t window_height)
     {
         if(!IsWindow(window_)) return kGfxResult_NoError;   // can't resize past window tear down
         GFX_ASSERT(swap_chain_ != nullptr);
+        for(uint32_t i = 0; i < max_frames_in_flight_; ++i)
+        {
+            collect(back_buffers_[i]);
+            back_buffers_[i] = nullptr;
+            freeRTVDescriptor(back_buffer_rtvs_[i]);
+        }
+        sync(); // make sure the GPU is done with the previous swap chain before resizing
+        window_width_  = window_width;
+        window_height_ = window_height;
+        HRESULT const hr = swap_chain_->ResizeBuffers(max_frames_in_flight_, window_width, window_height, back_buffer_format_, DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
+        if(hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DEVICE_HUNG)
+            GFX_TRY(handleDeviceLost());
+        else if(FAILED(hr))
+            return GFX_SET_ERROR(kGfxResult_InternalError, "Error detected during resizeBuffers: %s", hr);
+        back_buffer_index_ = swap_chain_->GetCurrentBackBufferIndex();
+        GFX_TRY(acquireSwapChainBuffers());
+        GFX_TRY(createBackBufferRTVs());
+        return kGfxResult_NoError;
+    }
+
+    GfxResult resizeTextures(uint32_t window_width, uint32_t window_height)
+    {
         for(uint32_t i = 0; i < textures_.size(); ++i)
         {
             Texture &texture = textures_.data()[i];
@@ -10232,6 +10255,22 @@ private:
             texture.resource_state_ = D3D12_RESOURCE_STATE_COMMON;
             texture.initial_resource_state_ = D3D12_RESOURCE_STATE_COMMON;
             texture.transitioned_ = false;
+            if(resource_desc.Flags != D3D12_RESOURCE_FLAG_NONE)
+            {
+                D3D12_RESOURCE_STATES transition_state = D3D12_RESOURCE_STATE_COMMON;
+                if((resource_desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) != 0)
+                    transition_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+                else if((resource_desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) != 0)
+                    transition_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+                else if((resource_desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0)
+                    transition_state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                if(transition_state != D3D12_RESOURCE_STATE_COMMON)
+                {
+                    if(transitionResource(texture, transition_state, kTransitionType_Implicit))
+                        submitPipelineBarriers();   // transition our resources if needed
+                    command_list_->DiscardResource(texture.resource_, nullptr);
+                }
+            }
             for(uint32_t j = 0; j < ARRAYSIZE(texture.dsv_descriptor_slots_); ++j)
             {
                 texture.dsv_descriptor_slots_[j].resize(resource_desc.DepthOrArraySize);
@@ -10245,27 +10284,6 @@ private:
                     texture.rtv_descriptor_slots_[j][k] = 0xFFFFFFFFu;
             }
         }
-        for(uint32_t i = 0; i < max_frames_in_flight_; ++i)
-        {
-            collect(back_buffers_[i]);
-            back_buffers_[i] = nullptr;
-            freeRTVDescriptor(back_buffer_rtvs_[i]);
-        }
-        sync(); // make sure the GPU is done with the previous swap chain before resizing
-        window_width_  = window_width;
-        window_height_ = window_height;
-        HRESULT const hr = swap_chain_->ResizeBuffers(max_frames_in_flight_, window_width, window_height, back_buffer_format_, DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
-        if(hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET || hr == DXGI_ERROR_DEVICE_HUNG)
-        {
-            GFX_TRY(handleDeviceLost());
-        }
-        else if(FAILED(hr))
-        {
-            return GFX_SET_ERROR(kGfxResult_InternalError, "Error detected during resizeBuffers: %s", hr);
-        }
-        back_buffer_index_ = swap_chain_->GetCurrentBackBufferIndex();
-        GFX_TRY(acquireSwapChainBuffers());
-        GFX_TRY(createBackBufferRTVs());
         return kGfxResult_NoError;
     }
 
