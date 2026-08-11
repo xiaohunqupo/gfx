@@ -4973,7 +4973,7 @@ public:
                 back_buffer_index_ = swap_chain_->GetCurrentBackBufferIndex();
                 fence_index_ = (fence_index_ + 1) % max_frames_in_flight_;
                 if(resized)
-                    GFX_TRY(resizeBackbuffers(window_width, window_height)); // reset fence index
+                    GFX_TRY(resizeBackBuffers(window_width, window_height)); // reset fence index
                 if(fences_[fence_index_]->GetCompletedValue() != fence_values_[fence_index_])
                 {
                     fences_[fence_index_]->SetEventOnCompletion(fence_values_[fence_index_], fence_event_);
@@ -10203,7 +10203,7 @@ private:
         return forceGarbageCollection();
     }
 
-    GfxResult resizeBackbuffers(uint32_t window_width, uint32_t window_height)
+    GfxResult resizeBackBuffers(uint32_t window_width, uint32_t window_height)
     {
         if(!IsWindow(window_)) return kGfxResult_NoError;   // can't resize past window tear down
         GFX_ASSERT(swap_chain_ != nullptr);
