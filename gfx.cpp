@@ -9948,7 +9948,7 @@ private:
                         for(size_t i = max_cached_files; i < bytecode_files.size(); ++i)
                             std::filesystem::remove(bytecode_files[i], ec);
                     }
-                    if (reflection_files.size() > max_cached_files)
+                    if(reflection_files.size() > max_cached_files)
                     {
                         std::sort(reflection_files.begin(), reflection_files.end(),
                             [&ec](std::filesystem::path const &a, std::filesystem::path const &b) {
