@@ -4884,33 +4884,27 @@ public:
     {
         for(uint32_t i = 0; i < buffers_.size(); ++i)
         {
-            auto *buffer = buffers_.at(i);
-            if(buffer != nullptr && buffer->initial_resource_state_ == D3D12_RESOURCE_STATE_COMMON && !*buffer->transitioned_ && (*buffer->resource_state_ & D3D12_RESOURCE_STATE_GENERIC_READ) == *buffer->resource_state_)
-                *buffer->resource_state_ = D3D12_RESOURCE_STATE_COMMON;
+            Buffer &buffer = buffers_.data()[i];
+            if(buffer.initial_resource_state_ == D3D12_RESOURCE_STATE_COMMON && !*buffer.transitioned_ && (*buffer.resource_state_ & D3D12_RESOURCE_STATE_GENERIC_READ) == *buffer.resource_state_)
+                *buffer.resource_state_ = D3D12_RESOURCE_STATE_COMMON;
         }
         for(uint32_t i = 0; i < textures_.size(); ++i)
         {
-            auto *texture = textures_.at(i);
-            if(texture != nullptr && !texture->transitioned_ && (texture->resource_state_ & D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE) == texture->resource_state_)
-                texture->resource_state_ = D3D12_RESOURCE_STATE_COMMON;
+            Texture &texture = textures_.data()[i];
+            if(!texture.transitioned_ && (texture.resource_state_ & D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE) == texture.resource_state_)
+                texture.resource_state_ = D3D12_RESOURCE_STATE_COMMON;
         }
         if(dbg_command_list_ != nullptr)
         {
             for(uint32_t i = 0; i < buffers_.size(); ++i)
             {
-                auto *buffer = buffers_.at(i);
-                if(buffer != nullptr)
-                {
-                    dbg_command_list_->AssertResourceState(buffer->resource_, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, *buffer->resource_state_);
-                }
+                Buffer const &buffer = buffers_.data()[i];
+                dbg_command_list_->AssertResourceState(buffer.resource_, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, *buffer.resource_state_);
             }
             for(uint32_t i = 0; i < textures_.size(); ++i)
             {
-                auto *texture = textures_.at(i);
-                if(texture != nullptr)
-                {
-                    dbg_command_list_->AssertResourceState(texture->resource_, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, texture->resource_state_);
-                }
+                Texture const &texture = textures_.data()[i];
+                dbg_command_list_->AssertResourceState(texture.resource_, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, texture.resource_state_);
             }
         }
     }
