@@ -364,6 +364,11 @@ public:
 
     GfxResult render(GfxTexture output_texture)
     {
+        if(!output_texture && gfxGetBackBufferColorSpace(gfx_) != DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709)
+            GFX_SET_ERROR(kGfxResult_InvalidParameter, "ImGui can only composite to sRGB render targets");
+        if(!!output_texture && output_texture.getFormat() != DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
+            GFX_SET_ERROR(kGfxResult_InvalidParameter, "ImGui can only render to sRGB output textures");
+
         ImGuiIO &io = ImGui::GetIO();
         ImGui::Render();    // implicit ImGui::EndFrame()
         ImDrawData *draw_data = ImGui::GetDrawData();
@@ -579,7 +584,7 @@ public:
 
     void setupRenderState(GfxBuffer const &index_buffer, GfxBuffer const &vertex_buffer, GfxTexture const &output_texture)
     {
-        gfxCommandBindKernel(gfx_, getKernel(output_texture ? output_texture.getFormat() : DXGI_FORMAT_R8G8B8A8_UNORM_SRGB));
+        gfxCommandBindKernel(gfx_, getKernel(output_texture ? DXGI_FORMAT_R8G8B8A8_UNORM_SRGB : gfxGetBackBufferFormat(gfx_)));
         gfxCommandBindIndexBuffer(gfx_, index_buffer);
         gfxCommandBindVertexBuffer(gfx_, vertex_buffer);
         gfxCommandBindColorTarget(gfx_, 0, output_texture);
