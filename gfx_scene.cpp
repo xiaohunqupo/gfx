@@ -591,7 +591,7 @@ private:
         camera.up     = glm::vec3(glm::normalize(up));
     }
 
-    static inline void TransformGltfLight(GfxLight& light, glm::dmat4 const& transform)
+    static inline void TransformGltfLight(GfxLight &light, glm::dmat4 const &transform)
     {
         glm::dvec4 position(0.0, 0.0, 0.0, 1.0);
         glm::dvec4 direction(0.0, 0.0, 1.0, 0.0);//Direction oriented toward the light
@@ -603,7 +603,7 @@ private:
         light.direction = glm::vec3(direction);
     }
 
-    static inline DXGI_FORMAT GetImageFormat(GfxImage const& image)
+    static inline DXGI_FORMAT GetImageFormat(GfxImage const &image)
     {
         if(image.format != DXGI_FORMAT_UNKNOWN) return image.format;
         if(image.bytes_per_channel != 1 && image.bytes_per_channel != 2 && image.bytes_per_channel != 4) return DXGI_FORMAT_UNKNOWN;
@@ -1665,9 +1665,9 @@ private:
             cgltf_accessor const *weights;
             struct TargetAccessors
             {
-                cgltf_accessor const* positions;
-                cgltf_accessor const* normals;
-                cgltf_accessor const* uvs;
+                cgltf_accessor const *positions;
+                cgltf_accessor const *normals;
+                cgltf_accessor const *uvs;
             };
             std::vector<TargetAccessors> targets;
 
@@ -2741,13 +2741,13 @@ private:
         return KTX_SUCCESS;
     }
 
-    GfxResult importKtx(GfxScene const& scene, char const *asset_file)
+    GfxResult importKtx(GfxScene const &scene, char const *asset_file)
     {
+        KTX_error_code result;
         GFX_ASSERT(asset_file != nullptr);
         if(gfxSceneFindObjectByAssetFile<GfxImage>(scene, asset_file))
             return kGfxResult_NoError;  // image was already imported
-        ktxTexture2 *ktx_texture;
-        KTX_error_code result;
+        ktxTexture2 *ktx_texture = nullptr;
         result = ktxTexture2_CreateFromNamedFile(asset_file, KTX_TEXTURE_CREATE_NO_FLAGS, &ktx_texture);
         if(result != KTX_SUCCESS)
             return GFX_SET_ERROR(kGfxResult_InvalidOperation, "Unable to open image `%s': %s", asset_file, ktxErrorString(result));
@@ -2759,7 +2759,8 @@ private:
         char const *file = GFX_MAX(strrchr(asset_file, '/'), strrchr(asset_file, '\\'));
         file = (file == nullptr ? asset_file : file + 1);   // retrieve file name
         GfxRef<GfxImage> image_ref = gfxSceneCreateImage(scene);
-        auto vk_to_dxgi = [](const uint32_t vk_format) -> DXGI_FORMAT {
+        auto const vk_to_dxgi = [](uint32_t vk_format) -> DXGI_FORMAT
+        {
             switch(vk_format)
             {
             case VK_FORMAT_R8_UNORM:
@@ -2850,7 +2851,7 @@ private:
     }
 #endif
 
-    GfxResult importExr(GfxScene const& scene, char const* asset_file)
+    GfxResult importExr(GfxScene const &scene, char const *asset_file)
     {
         GFX_ASSERT(asset_file != nullptr);
         if(gfxSceneFindObjectByAssetFile<GfxImage>(scene, asset_file))
@@ -3639,42 +3640,42 @@ bool gfxSceneSetMeshInstanceMetadata(GfxScene scene, uint64_t instance_handle, G
 GfxRef<GfxRenderInstance> gfxSceneCreateRenderInstance(GfxScene scene)
 {
     GfxRef<GfxRenderInstance> const instance_ref = {};
-    GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
+    GfxSceneInternal *gfx_scene = GfxSceneInternal::GetGfxScene(scene);
     if(!gfx_scene) return instance_ref; // invalid parameter
     return gfx_scene->createObject<GfxRenderInstance>(scene);
 }
 
 GfxResult gfxSceneDestroyRenderInstance(GfxScene scene, uint64_t instance_handle)
 {
-    GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
+    GfxSceneInternal *gfx_scene = GfxSceneInternal::GetGfxScene(scene);
     if(!gfx_scene) return kGfxResult_InvalidParameter;
     return gfx_scene->destroyObject<GfxRenderInstance>(instance_handle);
 }
 
 GfxResult gfxSceneDestroyAllRenderInstances(GfxScene scene)
 {
-    GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
+    GfxSceneInternal *gfx_scene = GfxSceneInternal::GetGfxScene(scene);
     if(!gfx_scene) return kGfxResult_InvalidParameter;
     return gfx_scene->clearObjects<GfxRenderInstance>();
 }
 
 uint32_t gfxSceneGetRenderInstanceCount(GfxScene scene)
 {
-    GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
+    GfxSceneInternal *gfx_scene = GfxSceneInternal::GetGfxScene(scene);
     if(!gfx_scene) return 0;    // invalid parameter
     return gfx_scene->getObjectCount<GfxRenderInstance>();
 }
 
-GfxRenderInstance const* gfxSceneGetRenderInstances(GfxScene scene)
+GfxRenderInstance const *gfxSceneGetRenderInstances(GfxScene scene)
 {
-    GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
+    GfxSceneInternal *gfx_scene = GfxSceneInternal::GetGfxScene(scene);
     if(!gfx_scene) return nullptr;  // invalid parameter
     return gfx_scene->getObjects<GfxRenderInstance>();
 }
 
-GfxRenderInstance* gfxSceneGetRenderInstance(GfxScene scene, uint64_t instance_handle)
+GfxRenderInstance *gfxSceneGetRenderInstance(GfxScene scene, uint64_t instance_handle)
 {
-    GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
+    GfxSceneInternal *gfx_scene = GfxSceneInternal::GetGfxScene(scene);
     if(!gfx_scene) return nullptr;  // invalid parameter
     return gfx_scene->getObject<GfxRenderInstance>(instance_handle);
 }
@@ -3682,22 +3683,22 @@ GfxRenderInstance* gfxSceneGetRenderInstance(GfxScene scene, uint64_t instance_h
 GfxRef<GfxRenderInstance> gfxSceneGetRenderInstanceHandle(GfxScene scene, uint32_t instance_index)
 {
     GfxRef<GfxRenderInstance> const instance_ref = {};
-    GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
+    GfxSceneInternal *gfx_scene = GfxSceneInternal::GetGfxScene(scene);
     if(!gfx_scene) return instance_ref; // invalid parameter
     return gfx_scene->getObjectHandle<GfxRenderInstance>(scene, instance_index);
 }
 
-GfxMetadata const& gfxSceneGetRenderInstanceMetadata(GfxScene scene, uint64_t instance_handle)
+GfxMetadata const &gfxSceneGetRenderInstanceMetadata(GfxScene scene, uint64_t instance_handle)
 {
     static GfxMetadata const metadata = {};
-    GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
+    GfxSceneInternal *gfx_scene = GfxSceneInternal::GetGfxScene(scene);
     if(!gfx_scene) return metadata; // invalid parameter
     return gfx_scene->getObjectMetadata<GfxRenderInstance>(instance_handle);
 }
 
-bool gfxSceneSetRenderInstanceMetadata(GfxScene scene, uint64_t instance_handle, GfxMetadata const& metadata)
+bool gfxSceneSetRenderInstanceMetadata(GfxScene scene, uint64_t instance_handle, GfxMetadata const &metadata)
 {
-    GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
+    GfxSceneInternal *gfx_scene = GfxSceneInternal::GetGfxScene(scene);
     if(!gfx_scene) return false;    // invalid parameter
     return gfx_scene->setObjectMetadata<GfxRenderInstance>(instance_handle, metadata);
 }
