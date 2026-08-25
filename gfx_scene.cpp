@@ -3640,42 +3640,42 @@ GfxRef<GfxRenderInstance> gfxSceneCreateRenderInstance(GfxScene scene)
 {
     GfxRef<GfxRenderInstance> const instance_ref = {};
     GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
-    if (!gfx_scene) return instance_ref; // invalid parameter
+    if(!gfx_scene) return instance_ref; // invalid parameter
     return gfx_scene->createObject<GfxRenderInstance>(scene);
 }
 
 GfxResult gfxSceneDestroyRenderInstance(GfxScene scene, uint64_t instance_handle)
 {
     GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
-    if (!gfx_scene) return kGfxResult_InvalidParameter;
+    if(!gfx_scene) return kGfxResult_InvalidParameter;
     return gfx_scene->destroyObject<GfxRenderInstance>(instance_handle);
 }
 
 GfxResult gfxSceneDestroyAllRenderInstances(GfxScene scene)
 {
     GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
-    if (!gfx_scene) return kGfxResult_InvalidParameter;
+    if(!gfx_scene) return kGfxResult_InvalidParameter;
     return gfx_scene->clearObjects<GfxRenderInstance>();
 }
 
 uint32_t gfxSceneGetRenderInstanceCount(GfxScene scene)
 {
     GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
-    if (!gfx_scene) return 0;    // invalid parameter
+    if(!gfx_scene) return 0;    // invalid parameter
     return gfx_scene->getObjectCount<GfxRenderInstance>();
 }
 
 GfxRenderInstance const* gfxSceneGetRenderInstances(GfxScene scene)
 {
     GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
-    if (!gfx_scene) return nullptr;  // invalid parameter
+    if(!gfx_scene) return nullptr;  // invalid parameter
     return gfx_scene->getObjects<GfxRenderInstance>();
 }
 
 GfxRenderInstance* gfxSceneGetRenderInstance(GfxScene scene, uint64_t instance_handle)
 {
     GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
-    if (!gfx_scene) return nullptr;  // invalid parameter
+    if(!gfx_scene) return nullptr;  // invalid parameter
     return gfx_scene->getObject<GfxRenderInstance>(instance_handle);
 }
 
@@ -3683,7 +3683,7 @@ GfxRef<GfxRenderInstance> gfxSceneGetRenderInstanceHandle(GfxScene scene, uint32
 {
     GfxRef<GfxRenderInstance> const instance_ref = {};
     GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
-    if (!gfx_scene) return instance_ref; // invalid parameter
+    if(!gfx_scene) return instance_ref; // invalid parameter
     return gfx_scene->getObjectHandle<GfxRenderInstance>(scene, instance_index);
 }
 
@@ -3691,13 +3691,13 @@ GfxMetadata const& gfxSceneGetRenderInstanceMetadata(GfxScene scene, uint64_t in
 {
     static GfxMetadata const metadata = {};
     GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
-    if (!gfx_scene) return metadata; // invalid parameter
+    if(!gfx_scene) return metadata; // invalid parameter
     return gfx_scene->getObjectMetadata<GfxRenderInstance>(instance_handle);
 }
 
 bool gfxSceneSetRenderInstanceMetadata(GfxScene scene, uint64_t instance_handle, GfxMetadata const& metadata)
 {
     GfxSceneInternal* gfx_scene = GfxSceneInternal::GetGfxScene(scene);
-    if (!gfx_scene) return false;    // invalid parameter
+    if(!gfx_scene) return false;    // invalid parameter
     return gfx_scene->setObjectMetadata<GfxRenderInstance>(instance_handle, metadata);
 }
